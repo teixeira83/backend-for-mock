@@ -18,6 +18,18 @@ function initializeDatabase() {
 function configureExpress() {
     app.use(bodyParser.json());
 
+    app.get("/user", async (req: any, res: any) => {
+        console.log('chamada em user')
+        res.send(await getAllUsers());
+    })
+
+    app.post("/user", async (req: any, res: any) => {
+        console.log('salvando user');
+        await insertUser(req.body.email, req.body.password);
+        res.send({success: true});
+    })
+
+
     app.listen(5000, () => {
         console.log("~> listening on 5000");
     })
@@ -35,13 +47,41 @@ function initDatabaseStructure() {
     });
 }
 
+function insertUser(email: string, password: string) {
+    return new Promise((r, rj) => {
+        db.run(`INSERT INTO user (id, email,password) VALUES (null,?,?)`,[email, password], (result: any, error: any) => {
+            if(error) {
+                rj(error);
+            } else {
+                console.log('add ok')
+                //console.log(result)
+                r(result);
+            }
+        })
+    });
+}
+
+function getAllUsers() {
+    return new Promise((r, rj) => {
+        db.all(`SELECT * FROM user`, (error: any, result: any) => {
+            if(error) {
+                rj(error);
+            } else {
+                r(result.map((user: any) => ({
+                    email: user.email,
+                    password: user.password
+                })));
+            }
+        });
+    });
+}
+
 async function init() {
     touchDBFileIfNotExists();
     initializeDatabase();
     await initDatabaseStructure();
     configureExpress();
 }
-
 
 (async () => {
     await init();
